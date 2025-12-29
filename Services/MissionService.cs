@@ -15,10 +15,10 @@ namespace Services
     {
         private readonly IMissionRepository _missionRepository;
         private readonly IHeroRepository _heroRepository;
-        private readonly ServiceHelper _serviceHelper;
+        private readonly IServiceHelper _serviceHelper;
         private readonly IMapper _mapper;
 
-        public MissionService(IMissionRepository missionRepository, ServiceHelper serviceHelper, IMapper mapper, IHeroRepository heroRepository)
+        public MissionService(IMissionRepository missionRepository, IServiceHelper serviceHelper, IMapper mapper, IHeroRepository heroRepository)
         {
             _missionRepository = missionRepository;
             _serviceHelper = serviceHelper;

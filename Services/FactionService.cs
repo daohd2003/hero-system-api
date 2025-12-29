@@ -15,9 +15,9 @@ namespace Services
     {
         private readonly IFactionRepository _factionRepository;
         private readonly IMapper _mapper;
-        private readonly ServiceHelper _serviceHelper;
+        private readonly IServiceHelper _serviceHelper;
 
-        public FactionService(IFactionRepository factionRepository, IMapper mapper, ServiceHelper serviceHelper)
+        public FactionService(IFactionRepository factionRepository, IMapper mapper, IServiceHelper serviceHelper)
         {
             _factionRepository = factionRepository;
             _mapper = mapper;

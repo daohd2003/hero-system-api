@@ -9,10 +9,10 @@ namespace Services
     public class HeroService : IHeroService
     {
         private readonly IMapper _mapper;
-        private readonly ServiceHelper _serviceHelper;
+        private readonly IServiceHelper _serviceHelper;
         private readonly IHeroRepository _heroRepository;
 
-        public HeroService(IMapper mapper, ServiceHelper serviceHelper, IHeroRepository heroRepository)
+        public HeroService(IMapper mapper, IServiceHelper serviceHelper, IHeroRepository heroRepository)
         {
             _mapper = mapper;
             _serviceHelper = serviceHelper;
