@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Services.Common
 {
-    public class ServiceHelper
+    public class ServiceHelper : IServiceHelper
     {
         private readonly ILogger<ServiceHelper> _logger;
 

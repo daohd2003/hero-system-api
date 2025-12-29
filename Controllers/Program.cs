@@ -22,9 +22,7 @@ namespace Controllers
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
             // Add services to the container.
-            builder.Services.AddScoped<IHeroRepository, HeroRepository>();
-            builder.Services.AddScoped<IHeroService, HeroService>();
-            builder.Services.AddScoped<ServiceHelper>();
+            builder.Services.AddScoped<IServiceHelper, ServiceHelper>();
 
             // Repositories
             builder.Services.AddScoped<IHeroRepository, HeroRepository>();
