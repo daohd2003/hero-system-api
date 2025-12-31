@@ -124,5 +124,10 @@ namespace Services
                 return _serviceHelper.HandleError<bool>(ex, $"Update Hero | Id: {id}");
             }
         }
+
+        public IQueryable<Hero> GetHeroesOData()
+        {
+            return _unitOfWork.Heroes.GetQueryable();
+        }
     }
 }

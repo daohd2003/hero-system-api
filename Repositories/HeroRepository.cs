@@ -60,5 +60,10 @@ namespace Repositories
         {
             return await _context.Heroes.FirstOrDefaultAsync(h => h.Name == name);
         }
+
+        public IQueryable<Hero> GetQueryable()
+        {
+            return _context.Heroes;
+        }
     }
 }

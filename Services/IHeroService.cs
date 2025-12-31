@@ -12,5 +12,6 @@ namespace Services
         Task<ServiceResult<bool>> UpdateHeroAsync(Guid id, UpdateHeroDto dto);
         Task<ServiceResult<bool>> DeleteHeroAsync(Guid id);
         Task<ServiceResult<HeroDto?>> GetHeroFullInfoAsync(Guid id);
+        IQueryable<Hero> GetHeroesOData();
     }
 }

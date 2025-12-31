@@ -1,10 +1,14 @@
 
 using BusinessObject.Helpers;
+using BusinessObject.Models;
 using Controllers.Middlewares;
 using DataAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OData.Edm;
+using Microsoft.OData.ModelBuilder;
 using Microsoft.OpenApi.Models;
 using Repositories;
 using Services;
@@ -17,6 +21,20 @@ namespace Controllers
     {
         public static void Main(string[] args)
         {
+            static IEdmModel GetEdmModel()
+            {
+                var odataBuilder = new ODataConventionModelBuilder();
+                odataBuilder.EntitySet<Hero>("Heroes");
+                odataBuilder.EntitySet<Mission>("Missions");
+                odataBuilder.EntitySet<Faction>("Factions");
+                
+                // Cấu hình composite key cho HeroMission
+                var heroMission = odataBuilder.EntitySet<HeroMission>("HeroMissions").EntityType;
+                heroMission.HasKey(hm => new { hm.HeroId, hm.MissionId });
+                
+                return odataBuilder.GetEdmModel();
+            }
+
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddDbContext<AppDbContext>(options =>
@@ -37,7 +55,17 @@ namespace Controllers
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IHeroAuthService, HeroAuthService>();
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+            .AddOData(opt => opt
+                .Select()   // Cho phép chọn cột ($select)
+                .Filter()   // Cho phép lọc ($filter)
+                .OrderBy()  // Cho phép sắp xếp ($orderby)
+                .Expand()   // Cho phép join bảng ($expand)
+                .Count()    // Cho phép đếm ($count)
+                .SetMaxTop(100) // Giới hạn lấy tối đa 100 dòng (chống hack)
+                .AddRouteComponents("odata", GetEdmModel()) // URL sẽ bắt đầu bằng /odata
+            );
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>

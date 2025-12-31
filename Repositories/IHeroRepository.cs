@@ -12,5 +12,6 @@ namespace Repositories
         Task<Hero?> GetHeroFullInfoAsync(Guid id);
 
         Task<Hero?> GetHeroByName(string name);
+        IQueryable<Hero> GetQueryable();
     }
 }
