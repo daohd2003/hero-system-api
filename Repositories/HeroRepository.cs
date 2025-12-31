@@ -55,5 +55,10 @@ namespace Repositories
                 .FirstOrDefaultAsync(h => h.Id == id);
             return hero;
         }
+
+        public async Task<Hero?> GetHeroByName(string name)
+        {
+            return await _context.Heroes.FirstOrDefaultAsync(h => h.Name == name);
+        }
     }
 }

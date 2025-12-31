@@ -27,6 +27,7 @@ namespace Services
             {
                 var hero = _mapper.Map<Hero>(dto);
                 hero.Id = Guid.NewGuid();
+                hero.PasswordHash = dto.Password;
                 heroId = hero.Id;
                 await _unitOfWork.Heroes.AddAsync(hero);
                 await _unitOfWork.SaveChangesAsync();

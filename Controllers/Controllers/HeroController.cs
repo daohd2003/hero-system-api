@@ -1,9 +1,7 @@
 ﻿using BusinessObject.DTOs;
-using BusinessObject.Models;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services;
-using Services.Common;
 
 namespace Controllers.Controllers
 {
@@ -19,6 +17,7 @@ namespace Controllers.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateHeroDto dto)
         {
             var result = await _heroService.CreateHeroAsync(dto);
@@ -28,6 +27,7 @@ namespace Controllers.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,User")]
         public async Task<IActionResult> GetHeroById(Guid id)
         {
             var result = await _heroService.GetHeroByIdAsync(id);
@@ -37,6 +37,7 @@ namespace Controllers.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllHeros([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
         {
             var result = await _heroService.GetAllHerosAsync(pageNumber, pageSize);
@@ -46,6 +47,7 @@ namespace Controllers.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _heroService.DeleteHeroAsync(id);
@@ -55,6 +57,7 @@ namespace Controllers.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateHeroDto dto)
         {
             var result = await _heroService.UpdateHeroAsync(id, dto);

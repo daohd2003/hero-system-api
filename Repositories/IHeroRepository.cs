@@ -10,5 +10,7 @@ namespace Repositories
         void Update(Hero hero);
         void Delete(Hero hero);
         Task<Hero?> GetHeroFullInfoAsync(Guid id);
+
+        Task<Hero?> GetHeroByName(string name);
     }
 }
