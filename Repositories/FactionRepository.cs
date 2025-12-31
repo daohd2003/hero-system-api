@@ -1,12 +1,6 @@
 ﻿using BusinessObject.Models;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Repositories
 {
@@ -16,18 +10,12 @@ namespace Repositories
 
         public FactionRepository(AppDbContext context)
         {
-
             _context = context;
         }
 
         public async Task AddAsync(Faction faction)
         {
             await _context.Factions.AddAsync(faction);
-        }
-
-        public async Task<IDbContextTransaction> BeginTransactionAsync()
-        {
-            return await _context.Database.BeginTransactionAsync();
         }
 
         public void DeleteAsync(Faction faction)
@@ -43,11 +31,6 @@ namespace Repositories
         public async Task<Faction?> GetByIdAsync(Guid id)
         {
             return await _context.Factions.FindAsync(id);
-        }
-
-        public async Task SaveChangesAsync()
-        {
-            await _context.SaveChangesAsync();
         }
 
         public void UpdateAsync(Faction faction)

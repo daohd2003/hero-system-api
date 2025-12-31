@@ -3,7 +3,6 @@ using BusinessObject.Helpers;
 using Controllers.Middlewares;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Repositories;
 using Services;
 using Services.Common;
@@ -24,10 +23,8 @@ namespace Controllers
             // Add services to the container.
             builder.Services.AddScoped<IServiceHelper, ServiceHelper>();
 
-            // Repositories
-            builder.Services.AddScoped<IHeroRepository, HeroRepository>();
-            builder.Services.AddScoped<IMissionRepository, MissionRepository>();
-            builder.Services.AddScoped<IFactionRepository, FactionRepository>();
+            // Unit of Work (quản lý SaveChanges và Transaction)
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Services
             builder.Services.AddScoped<IHeroService, HeroService>();

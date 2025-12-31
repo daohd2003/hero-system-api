@@ -13,6 +13,7 @@ namespace Tests
 {
     public class HeroServiceTests
     {
+        private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IHeroRepository> _mockHeroRepo;
         private readonly Mock<IServiceHelper> _mockServiceHelper;
         private readonly IMapper _mapper;
@@ -23,10 +24,13 @@ namespace Tests
             var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
             _mapper = config.CreateMapper();
 
+            _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockHeroRepo = new Mock<IHeroRepository>();
             _mockServiceHelper = new Mock<IServiceHelper>();
 
-            _heroService = new HeroService(_mapper, _mockServiceHelper.Object, _mockHeroRepo.Object);
+            _mockUnitOfWork.Setup(u => u.Heroes).Returns(_mockHeroRepo.Object);
+
+            _heroService = new HeroService(_mapper, _mockServiceHelper.Object, _mockUnitOfWork.Object);
         }
 
         #region CreateHeroAsync Tests
@@ -37,9 +41,9 @@ namespace Tests
             var dto = new CreateHeroDto { Name = "Iron Man", SuperPower = "Money", Level = 99 };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockHeroRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockHeroRepo.Setup(r => r.AddAsync(It.IsAny<Hero>())).Returns(Task.CompletedTask);
-            _mockHeroRepo.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _heroService.CreateHeroAsync(dto);
 
@@ -55,7 +59,7 @@ namespace Tests
             var dto = new CreateHeroDto { Name = "Test Hero", SuperPower = "Test", Level = 1 };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockHeroRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockHeroRepo.Setup(r => r.AddAsync(It.IsAny<Hero>())).ThrowsAsync(new Exception("Database error"));
 
             _mockServiceHelper.Setup(s => s.HandleError<Hero>(It.IsAny<Exception>(), It.IsAny<string>()))
@@ -68,6 +72,7 @@ namespace Tests
         }
 
         #endregion
+
 
         #region GetHeroByIdAsync Tests
 
@@ -127,7 +132,7 @@ namespace Tests
             var hero = new Hero { Id = heroId, Name = "Test Hero" };
 
             _mockHeroRepo.Setup(r => r.GetByIdAsync(heroId)).ReturnsAsync(hero);
-            _mockHeroRepo.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _heroService.DeleteHeroAsync(heroId);
 
@@ -178,7 +183,7 @@ namespace Tests
             var dto = new UpdateHeroDto { Name = "New Name", SuperPower = "New Power", Level = 50 };
 
             _mockHeroRepo.Setup(r => r.GetByIdAsync(heroId)).ReturnsAsync(hero);
-            _mockHeroRepo.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _heroService.UpdateHeroAsync(heroId, dto);
 

@@ -10,34 +10,31 @@ namespace Services
     {
         private readonly IMapper _mapper;
         private readonly IServiceHelper _serviceHelper;
-        private readonly IHeroRepository _heroRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public HeroService(IMapper mapper, IServiceHelper serviceHelper, IHeroRepository heroRepository)
+        public HeroService(IMapper mapper, IServiceHelper serviceHelper, IUnitOfWork unitOfWork)
         {
             _mapper = mapper;
             _serviceHelper = serviceHelper;
-            _heroRepository = heroRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<ServiceResult<Hero>> CreateHeroAsync(CreateHeroDto dto)
         {
             Guid? heroId = null;
-            await using var transaction = await _heroRepository.BeginTransactionAsync();
+            await using var transaction = await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var hero = _mapper.Map<Hero>(dto);
                 hero.Id = Guid.NewGuid();
                 heroId = hero.Id;
-                await _heroRepository.AddAsync(hero);
-                await _heroRepository.SaveChangesAsync();
+                await _unitOfWork.Heroes.AddAsync(hero);
+                await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return ServiceResult<Hero>.Created(hero);
             }
             catch (Exception ex)
             {
-                // Khi nhảy vào đây, transaction chưa được Commit
-                // Khi return xong, "await using" sẽ tự động Dispose và Rollback
-                // Không cần gọi Rollback thủ công
                 return _serviceHelper.HandleError<Hero>(ex, $"Create Hero | Id: {heroId}");
             }
         }
@@ -46,13 +43,13 @@ namespace Services
         {
             try
             {
-                var hero = await _heroRepository.GetByIdAsync(id);
+                var hero = await _unitOfWork.Heroes.GetByIdAsync(id);
                 if (hero == null)
                 {
                     return _serviceHelper.HandleNotFound<bool>("Hero không tồn tại", $"Delete Hero | Id: {id}");
                 }
-                _heroRepository.Delete(hero);
-                await _heroRepository.SaveChangesAsync();
+                _unitOfWork.Heroes.Delete(hero);
+                await _unitOfWork.SaveChangesAsync();
                 return ServiceResult<bool>.Ok(true);
             }
             catch (Exception ex)
@@ -65,7 +62,7 @@ namespace Services
         {
             try
             {
-                var (heroes, totalCount) = await _heroRepository.GetAllAsync(pageNumber, pageSize);
+                var (heroes, totalCount) = await _unitOfWork.Heroes.GetAllAsync(pageNumber, pageSize);
                 var heroDtos = _mapper.Map<List<HeroDto>>(heroes);
                 var result = new PagedResult<HeroDto>
                 {
@@ -86,7 +83,7 @@ namespace Services
         {
             try
             {
-                var hero = await _heroRepository.GetByIdAsync(id);
+                var hero = await _unitOfWork.Heroes.GetByIdAsync(id);
                 if (hero == null)
                     return _serviceHelper.HandleNotFound<HeroDto?>("Hero không tồn tại", $"GetById Hero | Id: {id}");
                 var heroDto = _mapper.Map<HeroDto>(hero);
@@ -100,7 +97,7 @@ namespace Services
 
         public async Task<ServiceResult<HeroDto?>> GetHeroFullInfoAsync(Guid id)
         {
-            var hero = await _heroRepository.GetHeroFullInfoAsync(id);
+            var hero = await _unitOfWork.Heroes.GetHeroFullInfoAsync(id);
             if (hero == null)
                 return _serviceHelper.HandleNotFound<HeroDto?>("Hero không tồn tại", $"GetById Hero | Id: {id}");
             var heroDto = _mapper.Map<HeroDto?>(hero);
@@ -111,13 +108,13 @@ namespace Services
         {
             try
             {
-                var hero = await _heroRepository.GetByIdAsync(id);
+                var hero = await _unitOfWork.Heroes.GetByIdAsync(id);
                 if (hero == null)
                     return _serviceHelper.HandleNotFound<bool>("Hero không tồn tại", $"Update Hero | Id: {id}");
 
                 _mapper.Map(dto, hero);
-                _heroRepository.Update(hero);
-                await _heroRepository.SaveChangesAsync();
+                _unitOfWork.Heroes.Update(hero);
+                await _unitOfWork.SaveChangesAsync();
 
                 return ServiceResult<bool>.Ok(true);
             }

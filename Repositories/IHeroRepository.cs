@@ -1,11 +1,4 @@
-﻿using BusinessObject.DTOs;
-using BusinessObject.Models;
-using Microsoft.EntityFrameworkCore.Storage;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BusinessObject.Models;
 
 namespace Repositories
 {
@@ -16,8 +9,6 @@ namespace Repositories
         Task AddAsync(Hero entity);
         void Update(Hero hero);
         void Delete(Hero hero);
-        Task<int> SaveChangesAsync();
-        Task<IDbContextTransaction> BeginTransactionAsync();
         Task<Hero?> GetHeroFullInfoAsync(Guid id);
     }
 }

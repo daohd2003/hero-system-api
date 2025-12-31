@@ -13,6 +13,7 @@ namespace Tests
 {
     public class MissionServiceTests
     {
+        private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IMissionRepository> _mockMissionRepo;
         private readonly Mock<IHeroRepository> _mockHeroRepo;
         private readonly Mock<IServiceHelper> _mockServiceHelper;
@@ -24,15 +25,18 @@ namespace Tests
             var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
             _mapper = config.CreateMapper();
 
+            _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockMissionRepo = new Mock<IMissionRepository>();
             _mockHeroRepo = new Mock<IHeroRepository>();
             _mockServiceHelper = new Mock<IServiceHelper>();
 
+            _mockUnitOfWork.Setup(u => u.Missions).Returns(_mockMissionRepo.Object);
+            _mockUnitOfWork.Setup(u => u.Heroes).Returns(_mockHeroRepo.Object);
+
             _missionService = new MissionService(
-                _mockMissionRepo.Object,
+                _mockUnitOfWork.Object,
                 _mockServiceHelper.Object,
-                _mapper,
-                _mockHeroRepo.Object
+                _mapper
             );
         }
 
@@ -44,9 +48,9 @@ namespace Tests
             var dto = new MissionDtos.CreateMissionDto { Title = "Save the World", DifficultyLevel = 10 };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockMissionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockMissionRepo.Setup(r => r.AddAsync(It.IsAny<Mission>())).Returns(Task.CompletedTask);
-            _mockMissionRepo.Setup(r => r.SaveChangesAsync()).Returns(Task.CompletedTask);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _missionService.CreateMissionAsync(dto);
 
@@ -61,7 +65,7 @@ namespace Tests
             var dto = new MissionDtos.CreateMissionDto { Title = "Test Mission", DifficultyLevel = 5 };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockMissionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockMissionRepo.Setup(r => r.AddAsync(It.IsAny<Mission>())).ThrowsAsync(new Exception("Database error"));
 
             _mockServiceHelper.Setup(s => s.HandleError<MissionDtos.MissionDto>(It.IsAny<Exception>(), It.IsAny<string>()))
@@ -74,6 +78,7 @@ namespace Tests
         }
 
         #endregion
+
 
         #region GetAllMissionsAsync Tests
 
@@ -124,12 +129,12 @@ namespace Tests
             var mission = new Mission { Id = missionId, Title = "Test Mission" };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockMissionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockHeroRepo.Setup(r => r.GetByIdAsync(heroId)).ReturnsAsync(hero);
             _mockMissionRepo.Setup(r => r.GetByIdAsync(missionId)).ReturnsAsync(mission);
             _mockMissionRepo.Setup(r => r.GetHeroMissionAsync(heroId, missionId)).ReturnsAsync((HeroMission?)null);
             _mockMissionRepo.Setup(r => r.AddHeroMissionAsync(It.IsAny<HeroMission>())).Returns(Task.CompletedTask);
-            _mockMissionRepo.Setup(r => r.SaveChangesAsync()).Returns(Task.CompletedTask);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _missionService.AssignMissionToHeroAsync(dto);
 
@@ -143,7 +148,7 @@ namespace Tests
             var dto = new MissionDtos.AssignMissionDto { HeroId = Guid.NewGuid(), MissionId = Guid.NewGuid(), ResultRank = "A" };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockMissionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockHeroRepo.Setup(r => r.GetByIdAsync(dto.HeroId)).ReturnsAsync((Hero?)null);
 
             _mockServiceHelper.Setup(s => s.HandleNotFound<bool>(It.IsAny<string>(), It.IsAny<string>()))
@@ -165,7 +170,7 @@ namespace Tests
             var hero = new Hero { Id = heroId, Name = "Test Hero" };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockMissionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockHeroRepo.Setup(r => r.GetByIdAsync(heroId)).ReturnsAsync(hero);
             _mockMissionRepo.Setup(r => r.GetByIdAsync(missionId)).ReturnsAsync((Mission?)null);
 
@@ -190,7 +195,7 @@ namespace Tests
             var existingRecord = new HeroMission { HeroId = heroId, MissionId = missionId };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockMissionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockHeroRepo.Setup(r => r.GetByIdAsync(heroId)).ReturnsAsync(hero);
             _mockMissionRepo.Setup(r => r.GetByIdAsync(missionId)).ReturnsAsync(mission);
             _mockMissionRepo.Setup(r => r.GetHeroMissionAsync(heroId, missionId)).ReturnsAsync(existingRecord);
@@ -210,7 +215,7 @@ namespace Tests
             var dto = new MissionDtos.AssignMissionDto { HeroId = Guid.NewGuid(), MissionId = Guid.NewGuid(), ResultRank = "A" };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockMissionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockHeroRepo.Setup(r => r.GetByIdAsync(dto.HeroId)).ThrowsAsync(new Exception("Database error"));
 
             _mockServiceHelper.Setup(s => s.HandleError<bool>(It.IsAny<Exception>(), It.IsAny<string>()))
