@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; color: #00d4ff; margin-bottom: 20px; }
+        
+        /* Login Section */
+        .login-section { background: #16213e; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .login-section input { padding: 10px; margin-right: 10px; border: none; border-radius: 5px; width: 300px; }
+        .login-section button { padding: 10px 20px; background: #00d4ff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .login-section button:hover { background: #00a8cc; }
+        
+        /* Status */
+        .status { padding: 10px; border-radius: 5px; margin-bottom: 20px; text-align: center; }
+        .status.connected { background: #0f5132; color: #75b798; }
+        .status.disconnected { background: #842029; color: #ea868f; }
+        
+        /* Chat Layout */
+        .chat-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        /* Chat Box */
+        .chat-box { background: #16213e; border-radius: 10px; overflow: hidden; }
+        .chat-header { background: #0f3460; padding: 15px; font-weight: bold; }
+        .chat-header.feed { border-left: 4px solid #00d4ff; }
+        .chat-header.private { border-left: 4px solid #e94560; }
+        .chat-header.notification { border-left: 4px solid #ffc107; }
+        
+        .messages { height: 300px; overflow-y: auto; padding: 15px; }
+        .message { margin-bottom: 10px; padding: 10px; border-radius: 8px; background: #1a1a2e; }
+        .message .sender { font-weight: bold; color: #00d4ff; }
+        .message .time { font-size: 0.8em; color: #888; margin-left: 10px; }
+        .message .content { margin-top: 5px; }
+        .message.system { background: #2d2d44; border-left: 3px solid #ffc107; }
+        .message.private { border-left: 3px solid #e94560; }
+        
+        /* Input Area */
+        .input-area { padding: 15px; background: #0f3460; display: flex; gap: 10px; }
+        .input-area input { flex: 1; padding: 10px; border: none; border-radius: 5px; }
+        .input-area button { padding: 10px 20px; background: #00d4ff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .input-area button:hover { background: #00a8cc; }
+        
+        /* Notification Box */
+        .notification-box { grid-column: 1 / -1; }
+        .notification-box .messages { height: 150px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦸 Hero Chat System</h1>
+        
+        <!-- Login -->
+        <div class="login-section">
+            <input type="text" id="tokenInput" placeholder="Nhập JWT Token...">
+            <button onclick="connect()">Kết nối</button>
+            <button onclick="disconnect()">Ngắt kết nối</button>
+        </div>
+        
+        <!-- Status -->
+        <div id="status" class="status disconnected">Chưa kết nối</div>
+        
+        <!-- Chat Layout -->
+        <div class="chat-layout">
+            <!-- Feed Chat -->
+            <div class="chat-box">
+                <div class="chat-header feed">📢 Feed Chat (Công khai)</div>
+                <div class="messages" id="feedMessages"></div>
+                <div class="input-area">
+                    <input type="text" id="feedInput" placeholder="Nhập tin nhắn..." onkeypress="if(event.key==='Enter') sendFeedMessage()">
+                    <button onclick="sendFeedMessage()">Gửi</button>
+                </div>
+            </div>
+            
+            <!-- Private Chat -->
+            <div class="chat-box">
+                <div class="chat-header private">🔒 Private Chat (Riêng tư)</div>
+                <div class="messages" id="privateMessages"></div>
+                <div class="input-area">
+                    <input type="text" id="targetHeroId" placeholder="Hero ID..." style="width: 100px; flex: none;">
+                    <input type="text" id="privateInput" placeholder="Tin nhắn riêng..." onkeypress="if(event.key==='Enter') sendPrivateMessage()">
+                    <button onclick="sendPrivateMessage()">Gửi</button>
+                </div>
+            </div>
+            
+            <!-- Notifications -->
+            <div class="chat-box notification-box">
+                <div class="chat-header notification">🔔 Thông báo hệ thống</div>
+                <div class="messages" id="notifications"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+        const FIREBASE_URL = 'https://herosystemchat-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+        async function connect() {
+            const token = document.getElementById('tokenInput').value;
+            if (!token) {
+                alert('Vui lòng nhập token!');
+                return;
+            }
+
+            // Load lịch sử chat từ Firebase
+            await loadChatHistory();
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(`/hubs/hero?access_token=${encodeURIComponent(token)}`)
+                .withAutomaticReconnect()
+                .build();
+
+            // Nhận tin nhắn Feed
+            connection.on("ReceiveFeedMessage", (user, message, time) => {
+                addMessage('feedMessages', user, message, time);
+            });
+
+            // Nhận tin nhắn riêng
+            connection.on("ReceivePrivateMessage", (senderName, message, time) => {
+                addMessage('privateMessages', senderName, message, time, 'private');
+            });
+
+            // Nhận thông báo hệ thống
+            connection.on("ReceiveSystemNotification", (message) => {
+                addNotification(message);
+            });
+
+            connection.onclose(() => updateStatus(false));
+            connection.onreconnecting(() => updateStatus(false, 'Đang kết nối lại...'));
+            connection.onreconnected(() => updateStatus(true));
+
+            connection.start()
+                .then(() => updateStatus(true))
+                .catch(err => {
+                    console.error(err);
+                    updateStatus(false, 'Lỗi: ' + err.message);
+                });
+        }
+
+        async function loadChatHistory() {
+            try {
+                // Load feed messages
+                const feedRes = await fetch(`${FIREBASE_URL}/feed_messages.json?orderBy="timestamp"&limitToLast=50`);
+                const feedData = await feedRes.json();
+                if (feedData) {
+                    Object.values(feedData).forEach(msg => {
+                        // Validate dữ liệu trước khi hiển thị
+                        if (msg && msg.senderName && msg.message) {
+                            addMessage('feedMessages', msg.senderName, msg.message, msg.timestamp);
+                        }
+                    });
+                }
+
+                // Load notifications
+                const notifRes = await fetch(`${FIREBASE_URL}/notifications.json?orderBy="timestamp"&limitToLast=20`);
+                const notifData = await notifRes.json();
+                if (notifData) {
+                    Object.values(notifData).forEach(n => {
+                        // Validate dữ liệu trước khi hiển thị
+                        if (n && n.message) {
+                            addNotification(n.message, n.timestamp);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Load history error:', err);
+            }
+        }
+
+        function disconnect() {
+            if (connection) {
+                connection.stop();
+                connection = null;
+            }
+        }
+
+        function sendFeedMessage() {
+            const message = document.getElementById('feedInput').value;
+            if (message && connection) {
+                connection.invoke("SendMessageToFeed", message)
+                    .catch(err => console.error(err));
+                document.getElementById('feedInput').value = '';
+            }
+        }
+
+        function sendPrivateMessage() {
+            const targetId = document.getElementById('targetHeroId').value;
+            const message = document.getElementById('privateInput').value;
+            if (targetId && message && connection) {
+                connection.invoke("SendPrivateMessage", targetId, message)
+                    .catch(err => console.error(err));
+                document.getElementById('privateInput').value = '';
+            }
+        }
+
+        function addMessage(containerId, sender, content, time, type = '') {
+            const container = document.getElementById(containerId);
+            const timeStr = new Date(time).toLocaleTimeString('vi-VN');
+            container.innerHTML += `
+                <div class="message ${type}">
+                    <span class="sender">${sender}</span>
+                    <span class="time">${timeStr}</span>
+                    <div class="content">${content}</div>
+                </div>
+            `;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addNotification(message, time = null) {
+            const container = document.getElementById('notifications');
+            const timeStr = time ? new Date(time).toLocaleTimeString('vi-VN') : new Date().toLocaleTimeString('vi-VN');
+            container.innerHTML += `
+                <div class="message system">
+                    <span class="time">${timeStr}</span>
+                    <div class="content">${message}</div>
+                </div>
+            `;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateStatus(connected, message = null) {
+            const status = document.getElementById('status');
+            if (connected) {
+                status.className = 'status connected';
+                status.textContent = '✅ Đã kết nối';
+            } else {
+                status.className = 'status disconnected';
+                status.textContent = message || '❌ Chưa kết nối';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 
 using BusinessObject.Helpers;
 using BusinessObject.Models;
+using Controllers.Hubs;
 using Controllers.Middlewares;
 using DataAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -27,11 +28,11 @@ namespace Controllers
                 odataBuilder.EntitySet<Hero>("Heroes");
                 odataBuilder.EntitySet<Mission>("Missions");
                 odataBuilder.EntitySet<Faction>("Factions");
-                
+
                 // Cấu hình composite key cho HeroMission
                 var heroMission = odataBuilder.EntitySet<HeroMission>("HeroMissions").EntityType;
                 heroMission.HasKey(hm => new { hm.HeroId, hm.MissionId });
-                
+
                 return odataBuilder.GetEdmModel();
             }
 
@@ -65,6 +66,8 @@ namespace Controllers
                 .SetMaxTop(100) // Giới hạn lấy tối đa 100 dòng (chống hack)
                 .AddRouteComponents("odata", GetEdmModel()) // URL sẽ bắt đầu bằng /odata
             );
+
+            builder.Services.AddSignalR();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
@@ -117,6 +120,21 @@ namespace Controllers
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"])),
                     ClockSkew = TimeSpan.Zero // Quan trọng: Loại bỏ độ trễ mặc định 5 phút
                 };
+                options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+
+                        // Nếu request có token và đường dẫn bắt đầu bằng /hubs/hero
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/hero"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
             var app = builder.Build();
@@ -132,11 +150,16 @@ namespace Controllers
 
             app.UseHttpsRedirection();
 
+            // Serve static files (chat.html)
+            app.UseStaticFiles();
+
             app.UseAuthentication();
             app.UseAuthorization();
 
 
             app.MapControllers();
+
+            app.MapHub<HeroHub>("/hubs/hero");
 
             app.Run();
         }
