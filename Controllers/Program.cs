@@ -56,8 +56,13 @@ namespace Controllers
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IHeroAuthService, HeroAuthService>();
 
+            builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
+
             // Notification Service cho SignalR
             builder.Services.AddScoped<INotificationService, NotificationService>();
+
+            // Cloudinary Service
+            builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
             builder.Services.AddControllers()
             .AddOData(opt => opt

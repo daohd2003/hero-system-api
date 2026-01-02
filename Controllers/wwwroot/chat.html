@@ -84,6 +84,8 @@
                 <div class="input-area">
                     <input type="text" id="targetHeroId" placeholder="Hero ID..." style="width: 100px; flex: none;">
                     <input type="text" id="privateInput" placeholder="Tin nhắn riêng..." onkeypress="if(event.key==='Enter') sendPrivateMessage()">
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+                    <button onclick="document.getElementById('imageInput').click()" title="Gửi ảnh">📷</button>
                     <button onclick="sendPrivateMessage()">Gửi</button>
                 </div>
             </div>
@@ -236,11 +238,20 @@
         function addMessage(containerId, sender, content, time, type = '') {
             const container = document.getElementById(containerId);
             const timeStr = new Date(time).toLocaleTimeString('vi-VN');
+            
+            // Kiểm tra nếu content là URL ảnh
+            let displayContent = content;
+            if (content && (content.startsWith('http://') || content.startsWith('https://')) && 
+                (content.includes('.jpg') || content.includes('.jpeg') || content.includes('.png') || 
+                 content.includes('.gif') || content.includes('.webp') || content.includes('cloudinary'))) {
+                displayContent = `<img src="${content}" style="max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer;" onclick="window.open('${content}', '_blank')">`;
+            }
+            
             container.innerHTML += `
                 <div class="message ${type}">
                     <span class="sender">${sender}</span>
                     <span class="time">${timeStr}</span>
-                    <div class="content">${content}</div>
+                    <div class="content">${displayContent}</div>
                 </div>
             `;
             container.scrollTop = container.scrollHeight;
@@ -267,6 +278,57 @@
                 status.className = 'status disconnected';
                 status.textContent = message || '❌ Chưa kết nối';
             }
+        }
+
+        // Upload ảnh lên Cloudinary
+        async function uploadImage(file) {
+            const token = localStorage.getItem('heroToken');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch('/api/chat/upload-image', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Upload thất bại');
+            }
+
+            const result = await response.json();
+            return result.url;
+        }
+
+        // Xử lý khi chọn ảnh
+        async function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const targetId = document.getElementById('targetHeroId').value;
+            if (!targetId) {
+                alert('Vui lòng nhập Hero ID trước khi gửi ảnh!');
+                event.target.value = '';
+                return;
+            }
+
+            try {
+                // Hiển thị trạng thái đang upload
+                addMessage('privateMessages', 'Hệ thống', '⏳ Đang upload ảnh...', new Date().toISOString(), 'system');
+                
+                const imageUrl = await uploadImage(file);
+                
+                // Gửi URL ảnh qua SignalR
+                await connection.invoke("SendPrivateMessage", targetId, imageUrl);
+                
+            } catch (err) {
+                alert('Lỗi upload: ' + err.message);
+            }
+            
+            event.target.value = ''; // Reset input
         }
     </script>
 </body>
