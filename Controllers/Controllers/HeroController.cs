@@ -1,7 +1,9 @@
 ﻿using BusinessObject.DTOs;
+using Controllers.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services;
+using System.Security.Claims;
 
 namespace Controllers.Controllers
 {
@@ -10,10 +12,12 @@ namespace Controllers.Controllers
     public class HeroController : ControllerBase
     {
         private readonly IHeroService _heroService;
+        private readonly INotificationService _notificationService;
 
-        public HeroController(IHeroService heroService)
+        public HeroController(IHeroService heroService, INotificationService notificationService)
         {
             _heroService = heroService;
+            _notificationService = notificationService;
         }
 
         [HttpPost]
@@ -37,9 +41,15 @@ namespace Controllers.Controllers
         }
 
         [HttpGet]
-        [AllowAnonymous]
+        [Authorize(Roles = "Admin,User")]
         public async Task<IActionResult> GetAllHeros([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
         {
+            var heroId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+            var heroName = User.Identity?.Name ?? "Ai đó";
+
+            // Gửi thông báo
+            await _notificationService.SendSystemNotificationAsync(heroId, $"{heroName} đã truy cập toàn bộ thông tin anh hùng.");
+
             var result = await _heroService.GetAllHerosAsync(pageNumber, pageSize);
             if (!result.Success)
                 return StatusCode(result.StatusCode, result.Message);

@@ -98,7 +98,30 @@
 
     <script>
         let connection = null;
-        const FIREBASE_URL = 'https://herosystemchat-default-rtdb.asia-southeast1.firebasedatabase.app';
+        let currentUserId = null;
+
+        // Decode JWT để lấy userId
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+                    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+                ).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Load token từ localStorage khi trang load và tự động kết nối
+        window.onload = async function() {
+            const savedToken = localStorage.getItem('heroToken');
+            if (savedToken) {
+                document.getElementById('tokenInput').value = savedToken;
+                await connect(); // Tự động kết nối lại
+            }
+        };
 
         async function connect() {
             const token = document.getElementById('tokenInput').value;
@@ -107,7 +130,14 @@
                 return;
             }
 
-            // Load lịch sử chat từ Firebase
+            // Lấy userId từ token
+            const payload = parseJwt(token);
+            currentUserId = payload?.nameid || payload?.sub || null;
+
+            // Lưu token vào localStorage
+            localStorage.setItem('heroToken', token);
+
+            // Load lịch sử chat từ API
             await loadChatHistory();
 
             connection = new signalR.HubConnectionBuilder()
@@ -144,28 +174,30 @@
 
         async function loadChatHistory() {
             try {
-                // Load feed messages
-                const feedRes = await fetch(`${FIREBASE_URL}/feed_messages.json?orderBy="timestamp"&limitToLast=50`);
-                const feedData = await feedRes.json();
-                if (feedData) {
-                    Object.values(feedData).forEach(msg => {
-                        // Validate dữ liệu trước khi hiển thị
+                // Load feed messages từ API
+                const feedRes = await fetch('/api/feed-messages?limit=50');
+                if (feedRes.ok) {
+                    const feedData = await feedRes.json();
+                    document.getElementById('feedMessages').innerHTML = '';
+                    feedData.forEach(msg => {
                         if (msg && msg.senderName && msg.message) {
                             addMessage('feedMessages', msg.senderName, msg.message, msg.timestamp);
                         }
                     });
                 }
 
-                // Load notifications
-                const notifRes = await fetch(`${FIREBASE_URL}/notifications.json?orderBy="timestamp"&limitToLast=20`);
-                const notifData = await notifRes.json();
-                if (notifData) {
-                    Object.values(notifData).forEach(n => {
-                        // Validate dữ liệu trước khi hiển thị
-                        if (n && n.message) {
-                            addNotification(n.message, n.timestamp);
-                        }
-                    });
+                // Load notifications từ API (theo userId)
+                if (currentUserId) {
+                    const notifRes = await fetch(`/api/notifications?userId=${currentUserId}&limit=20`);
+                    if (notifRes.ok) {
+                        const notifData = await notifRes.json();
+                        document.getElementById('notifications').innerHTML = '';
+                        notifData.forEach(n => {
+                            if (n && n.message) {
+                                addNotification(n.message, n.timestamp);
+                            }
+                        });
+                    }
                 }
             } catch (err) {
                 console.error('Load history error:', err);
@@ -177,6 +209,9 @@
                 connection.stop();
                 connection = null;
             }
+            // Xóa token khi ngắt kết nối
+            localStorage.removeItem('heroToken');
+            document.getElementById('tokenInput').value = '';
         }
 
         function sendFeedMessage() {

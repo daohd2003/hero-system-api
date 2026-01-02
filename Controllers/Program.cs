@@ -56,6 +56,9 @@ namespace Controllers
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IHeroAuthService, HeroAuthService>();
 
+            // Notification Service cho SignalR
+            builder.Services.AddScoped<INotificationService, NotificationService>();
+
             builder.Services.AddControllers()
             .AddOData(opt => opt
                 .Select()   // Cho phép chọn cột ($select)
