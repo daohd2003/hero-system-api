@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using BusinessObject.DTOs;
 using BusinessObject.Models;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Services.Common;
 
@@ -48,7 +49,7 @@ namespace Services
                 if (faction == null)
                     return _serviceHelper.HandleNotFound<bool>("Faction not found");
 
-                _unitOfWork.Factions.DeleteAsync(faction);
+                _unitOfWork.Factions.Delete(faction);
                 await _unitOfWork.SaveChangesAsync();
 
                 return ServiceResult<bool>.Ok(true);
@@ -63,7 +64,10 @@ namespace Services
         {
             try
             {
-                var factions = await _unitOfWork.Factions.GetAllAsync();
+                var factions = await _unitOfWork.Factions.GetQueryable()
+                    .Include(f => f.Heroes)
+                    .AsNoTracking()
+                    .ToListAsync();
                 var dtos = _mapper.Map<List<FactionDtos.FactionDto>>(factions);
                 return ServiceResult<List<FactionDtos.FactionDto>>.Ok(dtos);
             }

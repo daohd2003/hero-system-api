@@ -3,6 +3,7 @@ using BusinessObject.DTOs;
 using BusinessObject.Helpers;
 using BusinessObject.Models;
 using Microsoft.EntityFrameworkCore.Storage;
+using MockQueryable.Moq;
 using Moq;
 using Repositories;
 using Services;
@@ -88,7 +89,8 @@ namespace Tests
                 new Faction { Id = Guid.NewGuid(), Name = "X-Men", Heroes = new List<Hero>() }
             };
 
-            _mockFactionRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(factions);
+            var mockQueryable = factions.AsQueryable().BuildMock();
+            _mockFactionRepo.Setup(r => r.GetQueryable()).Returns(mockQueryable);
 
             var result = await _factionService.GetAllFactionsAsync();
 
@@ -100,7 +102,9 @@ namespace Tests
         [Fact]
         public async Task GetAllFactionsAsync_EmptyList_ReturnsEmptyList()
         {
-            _mockFactionRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Faction>());
+            var emptyList = new List<Faction>();
+            var mockQueryable = emptyList.AsQueryable().BuildMock();
+            _mockFactionRepo.Setup(r => r.GetQueryable()).Returns(mockQueryable);
 
             var result = await _factionService.GetAllFactionsAsync();
 
@@ -112,7 +116,7 @@ namespace Tests
         [Fact]
         public async Task GetAllFactionsAsync_Exception_ReturnsError()
         {
-            _mockFactionRepo.Setup(r => r.GetAllAsync()).ThrowsAsync(new Exception("Database error"));
+            _mockFactionRepo.Setup(r => r.GetQueryable()).Throws(new Exception("Database error"));
 
             _mockServiceHelper.Setup(s => s.HandleError<List<FactionDtos.FactionDto>>(It.IsAny<Exception>(), It.IsAny<string>()))
                 .Returns(ServiceResult<List<FactionDtos.FactionDto>>.Error("Database error"));
@@ -140,7 +144,7 @@ namespace Tests
 
             Assert.True(result.Success);
             Assert.Equal(200, result.StatusCode);
-            _mockFactionRepo.Verify(r => r.DeleteAsync(faction), Times.Once);
+            _mockFactionRepo.Verify(r => r.Delete(faction), Times.Once);
         }
 
         [Fact]

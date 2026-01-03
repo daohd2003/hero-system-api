@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using BusinessObject.DTOs;
 using BusinessObject.Models;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Services.Common;
 
@@ -41,7 +42,9 @@ namespace Services
         {
             try
             {
-                var missions = await _unitOfWork.Missions.GetAllAsync();
+                var missions = await _unitOfWork.Missions.GetQueryable()
+                    .AsNoTracking()
+                    .ToListAsync();
                 var dtos = _mapper.Map<List<MissionDtos.MissionDto>>(missions);
                 return ServiceResult<List<MissionDtos.MissionDto>>.Ok(dtos);
             }

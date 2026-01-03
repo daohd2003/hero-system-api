@@ -3,6 +3,7 @@ using BusinessObject.DTOs;
 using BusinessObject.Helpers;
 using BusinessObject.Models;
 using Microsoft.EntityFrameworkCore.Storage;
+using MockQueryable.Moq;
 using Moq;
 using Repositories;
 using Services;
@@ -91,7 +92,8 @@ namespace Tests
                 new Mission { Id = Guid.NewGuid(), Title = "Mission 2", DifficultyLevel = 8 }
             };
 
-            _mockMissionRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(missions);
+            var mockQueryable = missions.AsQueryable().BuildMock();
+            _mockMissionRepo.Setup(r => r.GetQueryable()).Returns(mockQueryable);
 
             var result = await _missionService.GetAllMissionsAsync();
 
@@ -103,7 +105,7 @@ namespace Tests
         [Fact]
         public async Task GetAllMissionsAsync_Exception_ReturnsError()
         {
-            _mockMissionRepo.Setup(r => r.GetAllAsync()).ThrowsAsync(new Exception("Database error"));
+            _mockMissionRepo.Setup(r => r.GetQueryable()).Throws(new Exception("Database error"));
 
             _mockServiceHelper.Setup(s => s.HandleError<List<MissionDtos.MissionDto>>(It.IsAny<Exception>(), It.IsAny<string>()))
                 .Returns(ServiceResult<List<MissionDtos.MissionDto>>.Error("Database error"));

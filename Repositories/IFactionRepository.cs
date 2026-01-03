@@ -5,9 +5,9 @@ namespace Repositories
     public interface IFactionRepository
     {
         Task AddAsync(Faction faction);
-        void UpdateAsync(Faction faction);
-        void DeleteAsync(Faction faction);
-        Task<List<Faction>> GetAllAsync();
+        void Update(Faction faction);
+        void Delete(Faction faction);
         Task<Faction?> GetByIdAsync(Guid id);
+        IQueryable<Faction> GetQueryable();
     }
 }

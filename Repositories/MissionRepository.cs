@@ -28,14 +28,14 @@ namespace Repositories
             return await _context.Missions.FindAsync(id);
         }
 
-        public async Task<List<Mission>> GetAllAsync()
-        {
-            return await _context.Missions.ToListAsync();
-        }
-
         public async Task<HeroMission?> GetHeroMissionAsync(Guid heroId, Guid missionId)
         {
             return await _context.HeroMissions.FirstOrDefaultAsync(hm => hm.HeroId == heroId && hm.MissionId == missionId);
+        }
+
+        public IQueryable<Mission> GetQueryable()
+        {
+            return _context.Missions;
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using BusinessObject.Models;
 using DataAccess;
-using Microsoft.EntityFrameworkCore;
 
 namespace Repositories
 {
@@ -18,14 +17,9 @@ namespace Repositories
             await _context.Factions.AddAsync(faction);
         }
 
-        public void DeleteAsync(Faction faction)
+        public void Delete(Faction faction)
         {
             _context.Factions.Remove(faction);
-        }
-
-        public async Task<List<Faction>> GetAllAsync()
-        {
-            return await _context.Factions.Include(f => f.Heroes).AsNoTracking().ToListAsync();
         }
 
         public async Task<Faction?> GetByIdAsync(Guid id)
@@ -33,9 +27,14 @@ namespace Repositories
             return await _context.Factions.FindAsync(id);
         }
 
-        public void UpdateAsync(Faction faction)
+        public void Update(Faction faction)
         {
             _context.Factions.Update(faction);
+        }
+
+        public IQueryable<Faction> GetQueryable()
+        {
+            return _context.Factions;
         }
     }
 }
