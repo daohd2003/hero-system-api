@@ -1,11 +1,6 @@
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 
 namespace Services
 {
@@ -13,13 +8,10 @@ namespace Services
     {
         private readonly Cloudinary _cloudinary;
 
-        public CloudinaryService(IConfiguration configuration)
+        public CloudinaryService(IOptions<CloudinarySettings> options)
         {
-            var account = new Account(
-                configuration["Cloudinary:CloudName"],
-                configuration["Cloudinary:ApiKey"],
-                configuration["Cloudinary:ApiSecret"]
-                );
+            var settings = options.Value;
+            var account = new Account(settings.CloudName, settings.ApiKey, settings.ApiSecret);
             _cloudinary = new Cloudinary(account);
         }
 

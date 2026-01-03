@@ -56,13 +56,15 @@ namespace Controllers
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IHeroAuthService, HeroAuthService>();
 
+            // Cloudinary Service với Options Pattern (SOLID - Dependency Inversion)
+            builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
             builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
+
+            // Chat Service
+            builder.Services.AddScoped<IChatService, ChatService>();
 
             // Notification Service cho SignalR
             builder.Services.AddScoped<INotificationService, NotificationService>();
-
-            // Cloudinary Service
-            builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
             builder.Services.AddControllers()
             .AddOData(opt => opt
