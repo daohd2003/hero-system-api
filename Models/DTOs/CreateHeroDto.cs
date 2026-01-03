@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace BusinessObject.DTOs
 {
@@ -18,13 +13,16 @@ namespace BusinessObject.DTOs
 
         [Range(0, 100, ErrorMessage = "Level phải từ 1 đến 100")]
         public int Level { get; set; }
+
+        [Required(ErrorMessage = "Password không được để trống")]
+        public string Password { get; set; }
     }
 
     public class HeroDto
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
-        public string Rank { get; set; } // Ví dụ: Level > 50 là Rank S
+        public string Rank { get; set; }
         public string FactionName { get; set; }
     }
 }

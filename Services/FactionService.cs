@@ -1,39 +1,35 @@
 ﻿using AutoMapper;
 using BusinessObject.DTOs;
 using BusinessObject.Models;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Services.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Services
 {
     public class FactionService : IFactionService
     {
-        private readonly IFactionRepository _factionRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IServiceHelper _serviceHelper;
 
-        public FactionService(IFactionRepository factionRepository, IMapper mapper, IServiceHelper serviceHelper)
+        public FactionService(IUnitOfWork unitOfWork, IMapper mapper, IServiceHelper serviceHelper)
         {
-            _factionRepository = factionRepository;
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
             _serviceHelper = serviceHelper;
         }
 
         public async Task<ServiceResult<FactionDtos.FactionDto>> CreateFactionAsync(FactionDtos.CreateFactionDto dto)
         {
-            await using var transaction = await _factionRepository.BeginTransactionAsync();
+            await using var transaction = await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var faction = _mapper.Map<Faction>(dto);
                 faction.Id = Guid.NewGuid();
 
-                await _factionRepository.AddAsync(faction);
-                await _factionRepository.SaveChangesAsync();
+                await _unitOfWork.Factions.AddAsync(faction);
+                await _unitOfWork.SaveChangesAsync();
 
                 await transaction.CommitAsync();
 
@@ -49,12 +45,12 @@ namespace Services
         {
             try
             {
-                var faction = await _factionRepository.GetByIdAsync(id);
+                var faction = await _unitOfWork.Factions.GetByIdAsync(id);
                 if (faction == null)
                     return _serviceHelper.HandleNotFound<bool>("Faction not found");
 
-                _factionRepository.DeleteAsync(faction);
-                await _factionRepository.SaveChangesAsync();
+                _unitOfWork.Factions.Delete(faction);
+                await _unitOfWork.SaveChangesAsync();
 
                 return ServiceResult<bool>.Ok(true);
             }
@@ -68,7 +64,10 @@ namespace Services
         {
             try
             {
-                var factions = await _factionRepository.GetAllAsync();
+                var factions = await _unitOfWork.Factions.GetQueryable()
+                    .Include(f => f.Heroes)
+                    .AsNoTracking()
+                    .ToListAsync();
                 var dtos = _mapper.Map<List<FactionDtos.FactionDto>>(factions);
                 return ServiceResult<List<FactionDtos.FactionDto>>.Ok(dtos);
             }

@@ -1,13 +1,6 @@
-﻿using BusinessObject.DTOs;
-using BusinessObject.Models;
+﻿using BusinessObject.Models;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Repositories
 {
@@ -53,16 +46,6 @@ namespace Repositories
             _context.Heroes.Update(hero);
         }
 
-        public async Task<int> SaveChangesAsync()
-        {
-            return await _context.SaveChangesAsync();
-        }
-
-        public async Task<IDbContextTransaction> BeginTransactionAsync()
-        {
-            return await _context.Database.BeginTransactionAsync();
-        }
-
         public async Task<Hero?> GetHeroFullInfoAsync(Guid id)
         {
             var hero = await _context.Heroes
@@ -71,6 +54,16 @@ namespace Repositories
                     .ThenInclude(hm => hm.Mission)
                 .FirstOrDefaultAsync(h => h.Id == id);
             return hero;
+        }
+
+        public async Task<Hero?> GetHeroByName(string name)
+        {
+            return await _context.Heroes.FirstOrDefaultAsync(h => h.Name == name);
+        }
+
+        public IQueryable<Hero> GetQueryable()
+        {
+            return _context.Heroes;
         }
     }
 }

@@ -14,6 +14,10 @@ namespace BusinessObject.Models
         public string SuperPower { get; set; }
         public int Level { get; set; }
 
+        public string PasswordHash { get; set; }
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiryTime { get; set; }
+
         public Guid? FactionId { get; set; }
         public Faction? Faction { get; set; }
 

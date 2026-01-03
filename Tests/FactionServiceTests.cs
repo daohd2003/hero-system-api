@@ -3,6 +3,7 @@ using BusinessObject.DTOs;
 using BusinessObject.Helpers;
 using BusinessObject.Models;
 using Microsoft.EntityFrameworkCore.Storage;
+using MockQueryable.Moq;
 using Moq;
 using Repositories;
 using Services;
@@ -13,6 +14,7 @@ namespace Tests
 {
     public class FactionServiceTests
     {
+        private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IFactionRepository> _mockFactionRepo;
         private readonly Mock<IServiceHelper> _mockServiceHelper;
         private readonly IMapper _mapper;
@@ -23,11 +25,14 @@ namespace Tests
             var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
             _mapper = config.CreateMapper();
 
+            _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockFactionRepo = new Mock<IFactionRepository>();
             _mockServiceHelper = new Mock<IServiceHelper>();
 
+            _mockUnitOfWork.Setup(u => u.Factions).Returns(_mockFactionRepo.Object);
+
             _factionService = new FactionService(
-                _mockFactionRepo.Object,
+                _mockUnitOfWork.Object,
                 _mapper,
                 _mockServiceHelper.Object
             );
@@ -41,9 +46,9 @@ namespace Tests
             var dto = new FactionDtos.CreateFactionDto { Name = "Avengers", Description = "Earth's Mightiest Heroes" };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockFactionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockFactionRepo.Setup(r => r.AddAsync(It.IsAny<Faction>())).Returns(Task.CompletedTask);
-            _mockFactionRepo.Setup(r => r.SaveChangesAsync()).Returns(Task.CompletedTask);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _factionService.CreateFactionAsync(dto);
 
@@ -58,7 +63,7 @@ namespace Tests
             var dto = new FactionDtos.CreateFactionDto { Name = "Test Faction", Description = "Test" };
 
             var mockTransaction = new Mock<IDbContextTransaction>();
-            _mockFactionRepo.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
+            _mockUnitOfWork.Setup(u => u.BeginTransactionAsync()).ReturnsAsync(mockTransaction.Object);
             _mockFactionRepo.Setup(r => r.AddAsync(It.IsAny<Faction>())).ThrowsAsync(new Exception("Database error"));
 
             _mockServiceHelper.Setup(s => s.HandleError<FactionDtos.FactionDto>(It.IsAny<Exception>(), It.IsAny<string>()))
@@ -72,6 +77,7 @@ namespace Tests
 
         #endregion
 
+
         #region GetAllFactionsAsync Tests
 
         [Fact]
@@ -83,7 +89,8 @@ namespace Tests
                 new Faction { Id = Guid.NewGuid(), Name = "X-Men", Heroes = new List<Hero>() }
             };
 
-            _mockFactionRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(factions);
+            var mockQueryable = factions.AsQueryable().BuildMock();
+            _mockFactionRepo.Setup(r => r.GetQueryable()).Returns(mockQueryable);
 
             var result = await _factionService.GetAllFactionsAsync();
 
@@ -95,7 +102,9 @@ namespace Tests
         [Fact]
         public async Task GetAllFactionsAsync_EmptyList_ReturnsEmptyList()
         {
-            _mockFactionRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Faction>());
+            var emptyList = new List<Faction>();
+            var mockQueryable = emptyList.AsQueryable().BuildMock();
+            _mockFactionRepo.Setup(r => r.GetQueryable()).Returns(mockQueryable);
 
             var result = await _factionService.GetAllFactionsAsync();
 
@@ -107,7 +116,7 @@ namespace Tests
         [Fact]
         public async Task GetAllFactionsAsync_Exception_ReturnsError()
         {
-            _mockFactionRepo.Setup(r => r.GetAllAsync()).ThrowsAsync(new Exception("Database error"));
+            _mockFactionRepo.Setup(r => r.GetQueryable()).Throws(new Exception("Database error"));
 
             _mockServiceHelper.Setup(s => s.HandleError<List<FactionDtos.FactionDto>>(It.IsAny<Exception>(), It.IsAny<string>()))
                 .Returns(ServiceResult<List<FactionDtos.FactionDto>>.Error("Database error"));
@@ -129,13 +138,13 @@ namespace Tests
             var faction = new Faction { Id = factionId, Name = "Test Faction" };
 
             _mockFactionRepo.Setup(r => r.GetByIdAsync(factionId)).ReturnsAsync(faction);
-            _mockFactionRepo.Setup(r => r.SaveChangesAsync()).Returns(Task.CompletedTask);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _factionService.DeleteFactionAsync(factionId);
 
             Assert.True(result.Success);
             Assert.Equal(200, result.StatusCode);
-            _mockFactionRepo.Verify(r => r.DeleteAsync(faction), Times.Once);
+            _mockFactionRepo.Verify(r => r.Delete(faction), Times.Once);
         }
 
         [Fact]
