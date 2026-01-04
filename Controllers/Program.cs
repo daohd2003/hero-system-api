@@ -1,6 +1,7 @@
 
 using BusinessObject.Helpers;
 using BusinessObject.Models;
+using Controllers.BackgroundServices;
 using Controllers.Hubs;
 using Controllers.Middlewares;
 using DataAccess;
@@ -65,6 +66,9 @@ namespace Controllers
 
             // Notification Service cho SignalR
             builder.Services.AddScoped<INotificationService, NotificationService>();
+
+            // Background Services
+            builder.Services.AddHostedService<HeroPowerDecayService>();
 
             builder.Services.AddControllers()
             .AddOData(opt => opt

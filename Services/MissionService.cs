@@ -82,6 +82,10 @@ namespace Services
                     ResultRank = dto.ResultRank
                 };
 
+                // Cập nhật LastActiveAt cho hero (dùng cho background decay task)
+                hero.LastActiveAt = DateTime.UtcNow;
+                _unitOfWork.Heroes.Update(hero);
+
                 await _unitOfWork.Missions.AddHeroMissionAsync(heroMision);
                 await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();

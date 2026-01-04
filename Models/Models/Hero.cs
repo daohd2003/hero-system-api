@@ -18,6 +18,9 @@ namespace BusinessObject.Models
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiryTime { get; set; }
 
+        // Track hoạt động cuối cùng của hero (dùng cho background task)
+        public DateTime? LastActiveAt { get; set; }
+
         public Guid? FactionId { get; set; }
         public Faction? Faction { get; set; }
 
